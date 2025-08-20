@@ -1,0 +1,139 @@
+basePath: /
+consumes:
+- application/json
+definitions:
+  DetectedObject:
+    description: Model representing a detected object.
+    properties:
+      bbox:
+        description: Bounding box coordinates [x, y, x2, y2]
+        items:
+          type: number
+        title: Bbox
+        type: array
+      label:
+        description: Class label of the detected object
+        title: Label
+        type: string
+      score:
+        description: Detection score
+        title: Score
+        type: number
+    required:
+    - bbox
+    - score
+    - label
+    title: DetectedObject
+    type: object
+  HTTPValidationError:
+    properties:
+      detail:
+        items:
+          $ref: '#/definitions/ValidationError'
+        title: Detail
+        type: array
+    title: HTTPValidationError
+    type: object
+  ObjectDetectionRequest:
+    description: Request model for object detection API.
+    properties:
+      image:
+        description: Base64 encoded image string
+        title: Image
+        type: string
+    required:
+    - image
+    title: ObjectDetectionRequest
+    type: object
+  ObjectDetectionResponse:
+    description: Response model for object detection API.
+    properties:
+      detections:
+        description: List of detected objects
+        items:
+          $ref: '#/definitions/DetectedObject'
+        title: Detections
+        type: array
+    required:
+    - detections
+    title: ObjectDetectionResponse
+    type: object
+  ValidationError:
+    properties:
+      loc:
+        items:
+          type: string
+        title: Location
+        type: array
+      msg:
+        title: Message
+        type: string
+      type:
+        title: Error Type
+        type: string
+    required:
+    - loc
+    - msg
+    - type
+    title: ValidationError
+    type: object
+info:
+  contact: {}
+  title: Object Detection Serving
+  version: 1.0.0
+paths:
+  /health_check:
+    get:
+      description: "Health check endpoint.\n\nReturns:\n    JSONResponse: 200 status"
+      operationId: healthcheck_health_check_get
+      parameters: []
+      produces:
+      - application/json
+      responses:
+        '200':
+          description: Successful health check
+          schema: {}
+      summary: Health Check
+  /v1/forward:
+    post:
+      description: "Run object detection on the provided image.\n\nArgs:\n    input_data\
+        \ (ObjectDetectionRequest): Structured request including the image to be processed.\n\
+        \    request (Request): FastAPI request object for accessing app state (model\
+        \ registry).\n\nReturns:\n    ObjectDetectionResponse: The response containing\
+        \ the detection results."
+      operationId: forward_v1_forward_post
+      parameters:
+      - in: body
+        name: input_data
+        required: true
+        schema:
+          $ref: '#/definitions/ObjectDetectionRequest'
+      produces:
+      - application/json
+      responses:
+        '200':
+          description: Successful Response
+          schema:
+            $ref: '#/definitions/ObjectDetectionResponse'
+        '422':
+          description: Validation Error
+          schema:
+            $ref: '#/definitions/HTTPValidationError'
+      summary: Forward
+      tags:
+      - forward
+produces:
+- application/json
+schemes:
+- https
+security:
+- APIKey: []
+securityDefinitions:
+  APIKey:
+    in: header
+    name: x-api-key
+    type: apiKey
+swagger: '2.0'
+x-google-backend:
+  address: ${cloud_run_url}
+  deadline: ${gateway_timeout}

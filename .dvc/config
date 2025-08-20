@@ -1,0 +1,4 @@
+[core]
+    remote = cj-tht
+['remote "cj-tht"']
+    url = gs://cj-tht

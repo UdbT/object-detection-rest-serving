@@ -1,0 +1,26 @@
+default:
+  app_name: "ObjectDetection"
+  default_api_timeout: 120 # seconds
+  backend_config:
+    state_bucket: "cj-tht"
+    state_prefix: "/terraform/object-detection/"
+    impersonate_service_account: "terraform@golden-bloom-418017.iam.gserviceaccount.com"
+
+  cloud_run_configs:
+    default_min_instance_count: 0
+    default_max_instance_count: 10
+    object_detection_serving:
+      image: "asia-southeast1-docker.pkg.dev/golden-bloom-418017/cj-tht/object-detection-serving:latest"
+      cpu: 1
+      memory: 2Gi
+      cpu_idle: False
+      startup_cpu_boost: True
+      container_port: 8000
+
+development:
+  cloud_project:
+    id: "golden-bloom-418017"
+    region: "asia-southeast1"
+    api_gw:
+      region: "asia-northeast1"
+    zone: "asia-southeast1-a"

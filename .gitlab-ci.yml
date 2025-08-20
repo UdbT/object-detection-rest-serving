@@ -1,0 +1,66 @@
+variables:
+  PYTHON_VERSION: "3.12"
+  POETRY_VERSION: "1.8.3"
+  RUFF_VERSION: "0.6.1"
+  AWS_DEFAULT_REGION: "ap-southeast-1"
+
+include:
+  - project: "sertiscorp/devops/gitlab-ci-templates"
+    ref: master
+    file:
+      - "ruff.yaml"
+  - component: $CI_SERVER_FQDN/sertiscorp/devops/ci-templates/docker_build/docker-build-aws@v1.3.9
+    inputs:
+      docker_build_options: "-f docker/Dockerfile"
+      docker_registry_image: "$ECR_REGISTRY"
+      ci_rules_build_only:
+        - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "develop" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "production" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "uat" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+          when: never
+        - if: $CI_COMMIT_BRANCH != "develop" && $CI_COMMIT_BRANCH != "production" && $CI_COMMIT_BRANCH != "uat" && $CI_COMMIT_BRANCH !~ /^release.*/i && $CI_COMMIT_TAG == null
+          when: always
+        - when: never
+      ci_rules_build_and_push:
+        - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "develop"
+          variables:
+            ENV: develop
+        - if: $CI_COMMIT_BRANCH =~ /^release.*/i || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "uat"
+          variables:
+            ENV: uat
+        - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "production"
+          variables:
+            ENV: production
+  - component: $CI_SERVER_FQDN/sertiscorp/devops/ci-templates/terraform/terraform@v1.1.0
+    inputs:
+      tf_path_root: terraform
+
+stages:
+  - test
+  - build
+  - deploy
+  - validate
+  - plan
+  - apply
+
+.gitlab-login:
+  before_script:
+    - export DOCKER_REGISTRY=$CI_REGISTRY
+    - export DOCKER_REGISTRY_SUBPATH=$CI_REGISTRY_SUBPATH
+    - export DOCKER_REGISTRY_IMAGE=${CI_REGISTRY_IMAGE}${DOCKER_REGISTRY_SUBPATH}
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin https://$DOCKER_REGISTRY
+    - export DOCKER_REGISTRY_IMAGE=$ECR_REGISTRY/$CI_PROJECT_NAME
+
+docker-build-only:
+  before_script:
+   - !reference [.gitlab-login, before_script]
+
+docker-build-and-push:
+  before_script:
+   - !reference [.gitlab-login, before_script]
+
+terraform-plan:
+  rules:
+    - !reference [docker-build-and-push, rules]
+
+terraform-apply:
+  rules:
+    - !reference [docker-build-and-push, rules]

@@ -1,0 +1,10 @@
+services:
+  serving:
+    image: asia-southeast1-docker.pkg.dev/golden-bloom-418017/cj-tht/object-detection-serving:latest
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ../src:/root/src
+    ports:
+      - 8000:8000

@@ -1,0 +1,5 @@
+outs:
+- md5: 2979d92b87615982e4cf5e632a1cea19
+  size: 80579382
+  hash: md5
+  path: yolo11m-sim-shape.onnx

@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "object-detection-rest-serving"
+version = "0.1.0"
+description = "Object Detection REST Serving using FastAPI and ONNX"
+package-mode = false
+
+authors = ["Utt Assoratgoon"]
+
+[tool.poetry.dependencies]
+python = "~3.12"
+fastapi = "^0.111.1"
+dynaconf = "^3.2.6"
+python-json-logger = "^2.0.7"
+onnxruntime = "^1.22.1"
+opencv-python = "^4.12.0.88"
+pillow = "^11.3.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+ruff = "0.6.1"
+codecov = ">=2.1.13"
+pytest-cov = "*"
+pytest-html = "*"
+pytest-mock = "*"
+pytest-asyncio = "^0.23.8"
+pre-commit = "^3.7.1"
+fastapi-swagger2 = "^0.2.4"
+dvc = {extras = ["gs"], version = "^3.62.0"}
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

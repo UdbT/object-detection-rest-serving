@@ -1,0 +1,86 @@
+# The list of settings that we can configure
+# https://docs.astral.sh/ruff/settings/
+
+# Top level
+line-length = 120
+
+[format] # https://docs.astral.sh/ruff/settings/#format
+docstring-code-format = true
+docstring-code-line-length = 20
+line-ending = "lf" # Use `\n` line endings for all files
+quote-style = "double"
+skip-magic-trailing-comma = false
+
+
+[lint] # https://docs.astral.sh/ruff/settings/#lint
+task-tags = ["TODO", "FIXME"]
+select = [
+    # Enable all rules by selecting them explicitly
+    "A",  # flake8-builtins
+    "B",  # flake8-bugbear
+    "C",  # flake8-comprehensions
+    "D",  # pydocstyle
+    "E",  # pycodestyle
+    "F",  # flake8-pyi
+    "G",  # flake8-logging-format
+    "I",  # isort
+    "N",  # pep8-naming
+    "Q",  # flake8-quotes
+    "R",  # flake8-return
+    "S",  # flake8-bandit
+    "T",  # flake8-tidy-imports
+    "W",  # pycodestyle warnings
+    "YTT", # flake8-2020
+    "ANN", # flake8-annotations
+    "ARG", # flake8-unused-arguments
+    "BLE", # flake8-blind-except
+    "COM", # flake8-commas
+    "DTZ", # flake8-datetimez
+    "EM",  # flake8-errmsg
+    "ERA", # eradicate
+    "EXE", # flake8-executable
+    "FBT", # flake8-boolean-trap
+    "ICN", # flake8-import-conventions
+    "INP", # flake8-no-pep420
+    "ISC", # flake8-implicit-str-concat
+    "PIE", # flake8-pie
+    "PL",  # pylint
+    "PT",  # flake8-pytest
+    "PTH", # flake8-use-pathlib
+    "PYI", # flake8-pyi
+    "RET", # flake8-return
+    "RSE", # flake8-raise
+    "RUF", # ruff-specific rules
+    "SIM", # flake8-simplify
+    "SLF", # flake8-self
+    "TCH", # flake8-type-checking
+    "TID", # flake8-tidy-imports
+    "TRY", # tryceratops
+    "T20", # flake8-print
+    "UP",  # pyupgrade
+]
+ignore = [
+    # Disabled to be used alongside the formatter https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+    "COM812", # https://docs.astral.sh/ruff/rules/missing-trailing-comma/
+    "ISC001", # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
+
+    # Docstring
+    "D203", # https://docs.astral.sh/ruff/rules/one-blank-line-before-class/
+    "D213", # https://docs.astral.sh/ruff/rules/multi-line-summary-second-line/
+    "D104", # https://docs.astral.sh/ruff/rules/undocumented-public-package/
+    "D100", # https://docs.astral.sh/ruff/rules/undocumented-public-module/
+    "D107", # https://docs.astral.sh/ruff/rules/undocumented-public-init/
+
+    # Deprecated
+    "ANN101", # https://docs.astral.sh/ruff/rules/missing-type-self/
+    "ANN102", # https://docs.astral.sh/ruff/rules/missing-type-cls/
+
+    # #Others
+    "ERA001", # https://docs.astral.sh/ruff/rules/commented-out-code/
+    "E501", # https://docs.astral.sh/ruff/rules/line-too-long/
+]
+
+pydocstyle.convention = "google"
+
+[lint.per-file-ignores]
+"tests/**/*.py" = ["INP001", "S101"]

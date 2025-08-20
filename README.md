@@ -1,158 +1,232 @@
 # Object Detection REST Serving
+
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111.1-green.svg)](https://fastapi.tiangolo.com/)
+[![ONNX Runtime](https://img.shields.io/badge/ONNX%20Runtime-1.22.1-orange.svg)](https://onnxruntime.ai/)
 
-<!-- TOC depthFrom:2 depthTo:3 -->
+A high-performance REST API service for real-time object detection using YOLO11M model with ONNX Runtime, built with FastAPI and deployed on Google Cloud Platform.
 
-- [Documentation](#documentation)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Environment Variables](#environment-variables)
-- [Tests](#testing)
-  - [Code formatter isort/Black](#run-the-code-formatter)
-  - [Linter - pylint](#run-the-linter)
-  - [Optional static type checker](#run-the-optional-static-type-checker)
-  - [Unit tests - pytest](#run-the-unit-tests)
-- [Resources](#resources)
+## Table of Contents
 
-<!-- /TOC -->
+-   [Overview](#overview)
+-   [Architecture](#architecture)
+-   [Prerequisites](#prerequisites)
+-   [Local Development](#local-development)
+-   [Running the Service Locally](#running-the-service-locally)
+-   [Testing](#testing)
+-   [API Documentation](#api-documentation)
 
-## Documentation
-## Installation
+## Overview
 
-### Initial setup
-There are git-hooks associated with this repository which are meant to automate some workflow and
-place some checks on the code and the repo to ensure best practises. The hooks are located in the
-.githooks folder. This folder needs to be setup with the following command -
+This service provides a REST API for object detection using the YOLO11M model optimized with ONNX Runtime. It can detect 80 different object classes from the COCO dataset and returns bounding boxes, confidence scores, and class labels for detected objects.
 
-```bash
-make gitsetup
+![Detected Image](assets/detected.png)
+
+### Key Features:
+
+-   **Real-time Object Detection**: Process images and return detection results in milliseconds
+-   **80 COCO Classes**: Detect common objects like people, vehicles, animals, and everyday items
+-   **RESTful API**: Simple HTTP endpoints for easy integration
+-   **Cloud-Native**: Designed for deployment on Google Cloud Platform
+-   **Scalable**: Built with FastAPI for high-performance serving
+-   **Production Ready**: Includes health checks, logging, and monitoring
+-   **CI/CD**: Automated testing, building, and deployment pipelines
+
+## Architecture
+
+### System Overview
+
+![Infrastructure Diagram](assets/infra.png)
+
+### Data Flow
+
+![Sequence Diagram](assets/dataflow.png)
+
+### Technology Stack
+
+-   **Backend Framework**: FastAPI (Python 3.12)
+-   **ML Runtime**: ONNX Runtime 1.22.1
+-   **Computer Vision**: OpenCV 4.12.0
+-   **Model**: YOLO11M (ONNX format)
+-   **Infrastructure**: Google Cloud Platform
+-   **Container**: Docker
+-   **Orchestration**: Cloud Run
+-   **CI/CD**: Github Action
+-   **API Gateway**: Google Cloud API Gateway
+-   **Infrastructure as Code**: CDKTF
+-   **Configuration**: Dynaconf
+-   **Logging**: Structured JSON logging
+
+### Project Structure
+
+```
+object-detection-rest-serving/
+├── src/                    # Main application source code
+│   ├── main.py            # FastAPI application entry point
+│   ├── config.py          # Configuration management
+│   ├── models/            # ML model implementations
+│   │   └── object_detector.py
+│   ├── routers/           # API route definitions
+│   │   ├── health_check.py
+│   │   └── v1/
+│   │       └── forward.py
+│   └── utils/             # Utility functions and middleware
+│
+├── infra/                 # Infrastructure as Code (CDKTF)
+│   ├── src/
+│   │   ├── main.py        # CDKTF application entry point
+│   │   ├── config.py      # Infrastructure configuration
+│   │   ├── construct/     # CDKTF constructs
+│   │   └── infrastructure/ # Infrastructure components
+│   └── pyproject.toml     # Infrastructure dependencies
+│
+├── tests/                 # Test suite
+│   ├── conftest.py        # Pytest configuration
+│   ├── models/            # Model tests
+│   ├── routers/           # API route tests
+│   └── utils/             # Utility function tests
+│
+├── configs/               # Application configuration files
+├── docker/                # Docker configuration
+├── notebooks/             # Jupyter notebooks for testing
+├── resources/             # Model files
+└── .github/               # GitHub workflows
 ```
 
-### Dependencies
+## Prerequisites
 
-Dependencies are managed by [Poetry](https://python-poetry.org/)
+### Installing Required Tools
 
-- With dev dependencies:
+-   **Python 3.12+**:
+-   **Poetry**: [Installation guide](https://python-poetry.org/docs/#installation)
+-   **Docker**: [Download Docker Desktop](https://www.docker.com/products/docker-desktop)
+-   **Git**
 
-The `install` command reads the `pyproject.toml` file from the current project, resolves the dependencies, and installs them.
+### Others
+
+-   GCP Service Account Key (will be provided separatly via email)
+
+## Local Development
+
+### 1. Clone the Repository
+
 ```bash
-$ poetry install
+git clone https://github.com/UdbT/object-detection-rest-serving.git
+cd object-detection-rest-serving
 ```
 
-If there is a `poetry.lock` file in the current directory, it will use the exact versions from there instead of resolving them. This ensures that everyone using the library will get the same versions of the dependencies.
+### 2. Install Dependencies
 
-- Without dev dependencies:
-
-You can specify to the command that you do not want the development dependencies installed by passing the --no-dev option.
+This project uses Poetry for dependency management:
 
 ```bash
-$ poetry install --no-dev
+# Install project dependencies
+poetry install
 ```
 
-#### Update dependencies
-In order to get the latest versions of the dependencies and to update the `poetry.lock` file, you should use the update command.
+### 3. Download Model
+
+The YOLO11M model file is managed with DVC. Download it:
 
 ```bash
-$ poetry update
+# Set GOOGLE_APPLICATION_CREDENTIALS
+export GOOGLE_APPLICATION_CREDENTIALS="<key-path>"
+
+# Pull the model file
+poetry run dvc pull
 ```
 
-This will resolve all dependencies of the project and write the exact versions into `poetry.lock`.
+## Running the Service Locally
 
-Alternatively, ff you just want to update a few packages and not all, you can list them as such:
+### Option 1: Direct Python Execution
 
 ```bash
-$ poetry update requests toml
+# Run the FastAPI application
+poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Add a dependency
-
-The add command adds required packages to your pyproject.toml and installs them.
+### Option 2: Using Docker Compose
 
 ```bash
-$ poetry add pendulum@^2.0.5
+# Build and run with Docker Compose
+docker-compose -f docker/docker-compose.yaml up --build
+
+# Or
+
+make run
 ```
 
-## Usage
+The service will be available at `http://localhost:8000`
 
-### Ruff Migration
-
-In order to disable the former linter/formatter, feel free to add this piece of code in the `gitlab-ci.yml` file.
+### Verify Service
 
 ```bash
-run-tests:
-  rules:
-    - when: never
+# Health check
+curl http://localhost:8000/health_check
 ```
 
 ## Testing
 
-### Run the code formatter
-
-This runs [isort](https://github.com/timothycrosley/isort/) and [Black](https://github.com/ambv/black/), the Python code formatter.
-```bash
-$ make format
-```
-
-Black reformats entire files in place, but doesn't reformat blocks that start with `# fmt: off` and end with `# fmt: on`.
-
-### Run the linter
-
-This test check syntax error and pip8 rules.
-```bash
-$ make lint
-```
-
-### Run the unit tests
+### Run Unit tests
 
 ```bash
-$ make pytest
+# Run all tests with coverage
+make pytest
 ```
 
-### Run the git hooks (commit and branch convention checking)
+### Manual API Testing
+
+#### Option 1: Using CURL command line
 
 ```bash
-$ make commitlint
+curl -X POST "http://localhost:8000/v1/forward" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image": "base64_encoded_image_string"
+  }'
 ```
 
-### Run the code formatter, optional static type checker, linter, and unit tests
+#### Option 2: Using the notebook provided in the `notebooks/` directory
+
+![Client notebook](assets/notebook.png)
+
+### Interactive Documentation
+
+-   **Local**: http://localhost:8000/docs
+
+### Code Quality
 
 ```bash
-$ make test
-```
-## Ruff
+# Format code
+make format
 
-### Format
+# Lint code
+make lint
 
-To format the files
-```bash
-ruff format
-```
+# Run tests
+make pytest
 
-### Check
-To check the files, you can add `-fix` to fix small issues such as import ordering, etc.
-```bash
-ruff check
+# Pre-commit hooks (if configured)
+pre-commit run --all-files
 ```
 
-## Pre-commit
-
-### Install pre-commit
+### Adding Dependencies
 
 ```bash
-pip install pre-commit
+# Add production dependency
+poetry add package-name
+
+# Add development dependency
+poetry add --group dev package-name
 ```
 
-### Install the pre-commit rules
+### Updating Dependencies
+
 ```bash
-pre-commit install
+# Update all dependencies
+poetry update
+
+# Update specific package
+poetry update package-name
 ```
-
-### How to run it
-
-1. A `git commit` will trigger it.
-2. Using `pre-commit run --all-files`.
-
-## Resources
-
-- [poetry](https://python-poetry.org/docs/)
-- [pytest](https://docs.pytest.org/en/stable/)

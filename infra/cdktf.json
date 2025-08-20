@@ -1,0 +1,6 @@
+{
+  "language": "python",
+  "app": "poetry run python -m src.main",
+  "output": "cdktf.out",
+  "projectId": "654f09cd-1658-4c78-8159-48c8af487628"
+}

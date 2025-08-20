@@ -21,14 +21,34 @@ from src.utils.model_utils import (
         (np.array([-2.0, 2.0]), 1.0 / (1.0 + np.exp(np.array([2.0, -2.0])))),
     ],
 )
-def test_sigmoid_values(x, expected):
+def test_sigmoid_values(x: np.ndarray, expected: np.ndarray) -> None:
+    """Test sigmoid function with various input values.
+
+    Args:
+        x: Input array to test sigmoid function.
+        expected: Expected output array after sigmoid transformation.
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If the sigmoid output doesn't match expected values or range.
+    """
     out = sigmoid(x)
     assert out.shape == x.shape
     assert np.allclose(out, expected, atol=1e-7)
     assert np.all((out >= 0.0) & (out <= 1.0))
 
 
-def test_xywh_to_xyxy():
+def test_xywh_to_xyxy() -> None:
+    """Test conversion from center-width-height to corner coordinates.
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If the coordinate conversion is incorrect.
+    """
     boxes = np.array(
         [
             [10.0, 10.0, 4.0, 6.0],  # x,y,w,h
@@ -51,9 +71,19 @@ def test_xywh_to_xyxy():
     assert np.allclose(out, expected, atol=1e-6)
 
 
-def test_split_fields_shapes_and_values():
+def test_split_fields_shapes_and_values() -> None:
+    """Test splitting of prediction fields into boxes and logits.
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If the field splitting produces incorrect shapes or values.
+    """
     boxes_true = np.array([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=np.float32)  # (N,4)
-    logits_true = np.array([[0.1, 0.2, 0.3], [3.0, -1.0, 0.0]], dtype=np.float32)  # (N, C=3)
+    logits_true = np.array(
+        [[0.1, 0.2, 0.3], [3.0, -1.0, 0.0]], dtype=np.float32
+    )  # (N, C=3)
     p = np.concatenate([boxes_true, logits_true], axis=1)  # (N, 7)
     preds = p.T[None, ...]  # (1, 7, 2)
 
@@ -65,7 +95,15 @@ def test_split_fields_shapes_and_values():
     assert np.allclose(logits, logits_true)
 
 
-def test_logits_to_probs_passthrough_when_in_01():
+def test_logits_to_probs_passthrough_when_in_01() -> None:
+    """Test that logits_to_probs passes through values already in [0,1] range.
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If the function modifies values that are already probabilities.
+    """
     probs = np.array([[0.0, 0.2], [0.8, 1.0]], dtype=np.float32)
     out = logits_to_probs(probs.copy())
 
@@ -81,7 +119,18 @@ def test_logits_to_probs_passthrough_when_in_01():
         np.array([[10.0, -10.0, 1.5], [0.0, 0.0, 0.0]], dtype=np.float32),
     ],
 )
-def test_logits_to_probs_applies_sigmoid(logits):
+def test_logits_to_probs_applies_sigmoid(logits: np.ndarray) -> None:
+    """Test that logits_to_probs applies sigmoid when values are outside [0,1].
+
+    Args:
+        logits: Input logits array that requires sigmoid transformation.
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If sigmoid is not called when it should be.
+    """
     # Spy on sigmoid to check if it's called
     with patch("src.utils.model_utils.sigmoid") as mock_sigmoid:
         logits_to_probs(logits)
@@ -105,7 +154,12 @@ def test_logits_to_probs_applies_sigmoid(logits):
             np.array([[10, 20, 30, 40], [0, 0, 100, 100]], dtype=np.float32),
             np.array(
                 [
-                    [10 * (1920 / 1280.0), 20 * (1080 / 640.0), 30 * (1920 / 1280.0), 40 * (1080 / 640.0)],
+                    [
+                        10 * (1920 / 1280.0),
+                        20 * (1080 / 640.0),
+                        30 * (1920 / 1280.0),
+                        40 * (1080 / 640.0),
+                    ],
                     [0, 0, 100 * (1920 / 1280.0), 100 * (1080 / 640.0)],
                 ],
                 dtype=np.float32,
@@ -113,12 +167,36 @@ def test_logits_to_probs_applies_sigmoid(logits):
         ),
     ],
 )
-def test_rescale_xyxy(image_shape, input_shape, boxes, expected):
+def test_rescale_xyxy(
+    image_shape: tuple, input_shape: tuple, boxes: np.ndarray, expected: np.ndarray
+) -> None:
+    """Test rescaling of bounding box coordinates between different image sizes.
+
+    Args:
+        image_shape: Target image dimensions as (height, width) tuple.
+        input_shape: Input image dimensions as (height, width) tuple.
+        boxes: Input bounding boxes in (x1, y1, x2, y2) format.
+        expected: Expected scaled bounding boxes.
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If the coordinate scaling is incorrect.
+    """
     out = rescale_xyxy(boxes, image_shape, input_shape)
     assert np.allclose(out, expected, atol=1e-6)
 
 
-def test_filter_by_conf_inclusive_threshold():
+def test_filter_by_conf_inclusive_threshold() -> None:
+    """Test confidence filtering with inclusive threshold.
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If the filtering doesn't work correctly with inclusive threshold.
+    """
     xyxy = np.array([[0, 0, 10, 10], [1, 1, 5, 5], [2, 2, 3, 3]], dtype=np.float32)
     scores = np.array([0.4, 0.5, 0.5000001], dtype=np.float32)
     labels = np.array([1, 2, 3], dtype=np.int64)
@@ -129,10 +207,20 @@ def test_filter_by_conf_inclusive_threshold():
     assert f_boxes.shape == (2, 4)
     assert np.allclose(f_scores, [0.5, 0.5000001])
     assert np.all(f_labels == np.array([2, 3]))
-    assert np.allclose(f_boxes, np.array([[1, 1, 5, 5], [2, 2, 3, 3]], dtype=np.float32))
+    assert np.allclose(
+        f_boxes, np.array([[1, 1, 5, 5], [2, 2, 3, 3]], dtype=np.float32)
+    )
 
 
-def test_filter_by_conf_all_filtered_out():
+def test_filter_by_conf_all_filtered_out() -> None:
+    """Test confidence filtering when all detections are below threshold.
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If the filtering doesn't handle empty results correctly.
+    """
     xyxy = np.array([[0, 0, 1, 1]], dtype=np.float32)
     scores = np.array([0.1], dtype=np.float32)
     labels = np.array([0], dtype=np.int64)

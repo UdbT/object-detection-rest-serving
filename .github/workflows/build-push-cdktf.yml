@@ -2,7 +2,7 @@ name: Build, Push to GAR, CDKTF Plan & Deploy
 
 on:
   push:
-    branches: [ develop, feat/add-serving-and-infra]
+    branches: [ develop ]
   workflow_dispatch:
 
 concurrency:

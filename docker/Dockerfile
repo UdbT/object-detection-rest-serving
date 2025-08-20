@@ -7,8 +7,6 @@ ARG POETRY_VERSION="1.8.3"
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
     build-essential \
-    git \
-    make \
     && pip install poetry==${POETRY_VERSION} poetry-dynamic-versioning \
     && rm -rf /var/lib/apt/lists/*
 

@@ -58,7 +58,7 @@ format:
 	poetry run ruff format $(all_dirs)
 
 lint:
-	poetry run ruff check $(all_dirs) --fix
+	poetry run ruff check $(src_dirs) --fix
 
 pytest:
 	poetry run pytest $(test_dirs)
@@ -88,17 +88,14 @@ build-cdktf-image:
 		-t $(CDKTF_IMAGE) \
 		-f docker/Dockerfile .
 
-docker-run-bash: build-cdktf-image
+run-cdktf-env: build-cdktf-image
 	docker run \
 		--rm \
 		-it \
-		-e GOOGLE_APPLICATION_CREDENTIALS=/gcp/creds.json \
 		-v $(PWD):/app \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v ~/.config/gcloud/application_default_credentials.json:/gcp/creds.json \
 		-w /app \
 		$(CDKTF_IMAGE) \
-		bash -c "export GAR_CREDENTIALS=$(cat /gcp/creds.json) && cd infra && poetry install && bash"
+		bash -c "cd infra && poetry install && bash"
 
 cdktf-plan:
 	cdktf plan ObjectDetectionStack

@@ -1,0 +1,154 @@
+name: Build, Push to GAR, CDKTF Plan & Deploy (Poetry + DVC + SA Key)
+
+on:
+  push:
+    branches: [ develop, feat/add-serving-and-infra]
+  workflow_dispatch:
+
+concurrency:
+  group: cdktf-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read   # id-token not needed when using a key
+
+env:
+  IMAGE_NAME: object-detection-serving
+  GAR_LOCATION: asia-southeast1
+  GAR_REPOSITORY: cj-tht
+  CDKTF_APP_DIR: infra
+  CDKTF_STACK_NAME: ObjectDetectionStack
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # ---------- Auth to Google Cloud (Service Account key JSON) ----------
+      # This sets Application Default Credentials (ADC) for all later steps.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # ---------- Git LFS ----------
+      - name: Ensure Git LFS present & pull
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y git-lfs
+          git lfs install --local
+          git lfs pull
+
+      # ---------- Python / Poetry (for DVC and CDKTF app) ----------
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry==1.8.3
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+
+      - name: Cache Poetry virtualenvs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./.venv
+            ${{ env.CDKTF_APP_DIR }}/.venv
+          key: ${{ runner.os }}-poetry-multi-${{ hashFiles('poetry.lock', format('{0}/poetry.lock', env.CDKTF_APP_DIR)) }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-multi-
+
+      # ---------- DVC (select the extra that matches your remote) ----------
+      - name: Install DVC
+        run: |
+          poetry run pip install "dvc[gs]"
+          poetry run dvc version
+
+      - name: Cache .dvc/cache
+        uses: actions/cache@v4
+        with:
+          path: .dvc/cache
+          key: ${{ runner.os }}-dvc-cache-${{ hashFiles('**/.dvc/config', '**/dvc.yaml', '**/dvc.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dvc-cache-
+
+      - name: DVC pull data
+        env:
+          GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          poetry run dvc pull
+          ls -lah
+
+      # ---------- Docker → GAR ----------
+      - name: Configure Docker for GAR
+        run: |
+          HOST="${GAR_LOCATION}-docker.pkg.dev"
+          gcloud auth configure-docker "${HOST}" --quiet
+
+      - name: Build & Push image
+        id: buildpush
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          HOST="${GAR_LOCATION}-docker.pkg.dev"
+          IMAGE_URI="${HOST}/${GCP_PROJECT_ID}/${GAR_REPOSITORY}/${IMAGE_NAME}:${GITHUB_SHA}"
+          echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_OUTPUT
+
+          docker build -f docker/Dockerfile -t "${IMAGE_URI}" .
+          docker push "${IMAGE_URI}"
+
+      # ---------- CDKTF toolchains ----------
+      - name: Setup Node.js (for CDKTF CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install CDKTF CLI
+        run: npm i -g cdktf-cli@latest
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.1"
+
+      - name: Install Python deps (Poetry in infra/)
+        working-directory: ${{ env.CDKTF_APP_DIR }}
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      # ---------- CDKTF (Python via Poetry) ----------
+
+      - name: CDKTF plan
+        continue-on-error: true
+        working-directory: ${{ env.CDKTF_APP_DIR }}
+        env:
+          DYNACONF_CLOUD_RUN_CONFIGS__OBJECT_DETECTION_SERVING__IMAGE: ${{ steps.buildpush.outputs.IMAGE_URI }}
+          STACK_NAME: ${{ env.CDKTF_STACK_NAME }}
+        run: |
+          echo "Planning with IMAGE=${DYNACONF_CLOUD_RUN_CONFIGS__OBJECT_DETECTION_SERVING__IMAGE}"
+          cdktf plan ${STACK_NAME}
+
+      - name: CDKTF deploy
+        working-directory: ${{ env.CDKTF_APP_DIR }}
+        env:
+          DYNACONF_CLOUD_RUN_CONFIGS__OBJECT_DETECTION_SERVING__IMAGE: ${{ steps.buildpush.outputs.IMAGE_URI }}
+          GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+          STACK_NAME: ${{ env.CDKTF_STACK_NAME }}
+        run: |
+          echo "Deploying with IMAGE=${DYNACONF_CLOUD_RUN_CONFIGS__OBJECT_DETECTION_SERVING__IMAGE}"
+          cdktf deploy ${STACK_NAME} --auto-approve

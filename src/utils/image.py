@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_file_size(file_byte: BytesIO) -> float:
-    """Get file size from file on BytesIO format
+    """Get file size from file on BytesIO format.
 
     Args:
         file_byte: BytesIO
@@ -20,7 +20,7 @@ def get_file_size(file_byte: BytesIO) -> float:
 
 
 def apply_orientation_exif(image: Image) -> Image:
-    """Convert image according to exif data (currently support only orientation)
+    """Convert image according to exif data (currently support only orientation).
 
     Args:
         image (Image): PIL image
@@ -33,14 +33,14 @@ def apply_orientation_exif(image: Image) -> Image:
 
     # Get orientation from exif tag 274
     if orientation := img_exif.get(274):
-        logger.warning(f"image will be rotated/flipped with orientation {orientation}")
+        logger.warning("image will be rotated/flipped with orientation %d", orientation)
         image = ImageOps.exif_transpose(image)
 
     return image
 
 
 def get_file_type(img_byte: BytesIO) -> tuple[str, np.ndarray]:
-    """Verify image type
+    """Verify image type.
 
     Args:
         img_byte: BytesIO

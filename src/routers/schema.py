@@ -15,19 +15,30 @@ class ObjectDetectionRequest(BaseModel):
     image: str = Field(..., description="Base64 encoded image string")
 
     @field_validator("image")
-    def check_image(cls, content: str) -> np.ndarray:
+    def check_image(cls, content: str) -> np.ndarray: # noqa: N805
+        """Validate and process the input image.
+
+        Args:
+            content (str): Base64 encoded image string.
+
+        Returns:
+            np.ndarray: Processed image array.
+
+        Raises:
+            ValueError: If the image is invalid or cannot be processed.
+        """
         try:
             img_byte = BytesIO(base64.b64decode(content))
             if get_file_size(img_byte) > settings.max_size_mb_threshold:
-                raise ValueError("INPUT_SIZE_TOO_LARGE")
+                raise ValueError("INPUT_SIZE_TOO_LARGE") # noqa: EM101
             img_type, img_arr = get_file_type(img_byte)
-        except base64.binascii.Error:
-            raise ValueError("INVALID_BASE64")
-        except (UnidentifiedImageError, OSError):
-            raise ValueError("UNREADABLE_IMAGE")
+        except base64.binascii.Error as err:
+            raise ValueError("INVALID_BASE64") from err # noqa: EM101
+        except (UnidentifiedImageError, OSError) as err:
+            raise ValueError("UNREADABLE_IMAGE") from err # noqa: EM101
 
         if img_type not in [f"image/{_type}" for _type in settings.allow_image_types]:
-            raise ValueError("INVALID_FILE_TYPE")
+            raise ValueError("INVALID_FILE_TYPE") # noqa: EM101
 
         return img_arr
 

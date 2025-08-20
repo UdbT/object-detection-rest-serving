@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 from pytest_mock import MockerFixture

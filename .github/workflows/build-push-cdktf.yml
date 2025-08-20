@@ -1,4 +1,4 @@
-name: Build, Push to GAR, CDKTF Plan & Deploy (Poetry + DVC + SA Key)
+name: Build, Push to GAR, CDKTF Plan & Deploy
 
 on:
   push:
@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read   # id-token not needed when using a key
+  contents: read
 
 env:
   IMAGE_NAME: object-detection-serving
@@ -26,11 +26,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          lfs: true
 
       # ---------- Auth to Google Cloud (Service Account key JSON) ----------
-      # This sets Application Default Credentials (ADC) for all later steps.
+      # This sets Application Default Credentials (ADC)
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -41,15 +39,7 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # ---------- Git LFS ----------
-      - name: Ensure Git LFS present & pull
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y git-lfs
-          git lfs install --local
-          git lfs pull
-
-      # ---------- Python / Poetry (for DVC and CDKTF app) ----------
+      # ---------- Python & Poetry ----------
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -73,12 +63,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-poetry-multi-
 
-      # ---------- DVC (select the extra that matches your remote) ----------
-      - name: Install DVC
+      - name: Install Dependencies
         run: |
-          poetry run pip install "dvc[gs]"
-          poetry run dvc version
+          poetry install --no-interaction
 
+      # ---------- DVC ----------
       - name: Cache .dvc/cache
         uses: actions/cache@v4
         with:
@@ -93,6 +82,16 @@ jobs:
         run: |
           poetry run dvc pull
           ls -lah
+
+      # ---- Lint ----
+      - name: Run lint
+        run: |
+          poetry run ruff check src
+
+      # ---- Unit tests ----
+      - name: Run tests
+        run: |
+          poetry run pytest tests
 
       # ---------- Docker → GAR ----------
       - name: Configure Docker for GAR
@@ -112,7 +111,7 @@ jobs:
           docker build -f docker/Dockerfile -t "${IMAGE_URI}" .
           docker push "${IMAGE_URI}"
 
-      # ---------- CDKTF toolchains ----------
+      # ---------- CDKTF dependencies ----------
       - name: Setup Node.js (for CDKTF CLI)
         uses: actions/setup-node@v4
         with:
@@ -131,7 +130,7 @@ jobs:
         run: |
           poetry install --no-interaction --no-ansi
 
-      # ---------- CDKTF (Python via Poetry) ----------
+      # ---------- CDKTF execute ----------
 
       - name: CDKTF plan
         continue-on-error: true

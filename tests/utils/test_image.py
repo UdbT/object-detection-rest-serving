@@ -1,10 +1,11 @@
 import io
+
 import numpy as np
 import pytest
-from pytest_mock import MockerFixture
 from PIL import Image
+from pytest_mock import MockerFixture
 
-from src.utils.image import get_file_size, apply_orientation_exif, get_file_type, ImageOps
+from src.utils.image import ImageOps, apply_orientation_exif, get_file_size, get_file_type
 
 
 def test_get_file_size_bytesio():

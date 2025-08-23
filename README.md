@@ -206,9 +206,6 @@ make lint
 
 # Run tests
 make pytest
-
-# Pre-commit hooks (if configured)
-pre-commit run --all-files
 ```
 
 ### Adding Dependencies
